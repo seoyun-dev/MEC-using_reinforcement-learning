@@ -1,7 +1,7 @@
 import numpy as np
-import random
-import time
 import matplotlib.pyplot as plt
+import random
+
 from CloudServer import CloudServer
 from VRUser import VRUser
 from MECServer import MECServer
@@ -12,8 +12,6 @@ from MECServer import MECServer
 s   = 1460       # UDP packet size (단위: bytes)
 h   = 1.5        # computation 입력과 출력의 변화율
 C_r = 1/600      # 비디오 청크의 압축률
-# TODO 이 설명이 맞는지 확인
-c   = 0.99       # Offloading ratio of raw video data (MEC에서 캐시된 데이터들 중 c비율만 MEC에서 컴퓨팅)
 D1  = 0.5        # Video chunk duration in seconds
 
 # Video, frame 
@@ -30,13 +28,19 @@ D_th = 0.02      # seconds
 W_M = 1.6 * (10**12)  # MEC 서버에서 초당 처리되는 데이터 크기
 W_U = 1.6 * (40**9)   # User 에서 초당 처리되는 데이터 크기
 
+# 강화학습 변동 파라미터
+c  =0.99              # Offloading ratio of raw video data (MEC에서 캐시된 데이터들 중 c비율만 MEC에서 컴퓨팅)
+R1 = random.randint(0,160000000)        # cloud > MEC 전송률
+R2 = 10 * random.randint(0,160000000)   # MEC > user 전송률
+R3 = random.randint(0,160000000)        # cloud > user 전송률
+
 
 
 ##################### 객체, 그래프 생성
 
-cloudserver = CloudServer()     # 클라우드 서버
-MECserver   = MECServer(W_M)    # MEC 서버
-vruser      = VRUser(W_U)       # VR 유저
+cloudserver = CloudServer(R1, R3)      # 클라우드 서버
+MECserver   = MECServer(W_M, R2)       # MEC 서버
+vruser      = VRUser(W_U)              # VR 유저
 
 plt.figure(figsize=(8, 6))
 plt.grid(True)
@@ -59,10 +63,10 @@ for i in range(eterate):
         
     #D2 계산
     predictFov_rate  = MECserver.get_predict_fov()  # 예측 성공 비율
-    delay           += MECserver.offload_computation(total_bit) # VR유저에게 받아온 실제 FOV와 예측 FOV비교
+    # delay           += MECserver.offload_computation(total_bit) # VR유저에게 받아온 실제 FOV와 예측 FOV비교
     # TODO 아래처럼 변경 맞는지 확인
     # 캐싱데이터 중 예측 성공한 데이터의 비율 c만큼 계산
-    # delay           += MECserver.offload_computation((total_bit*predictFov_rate)*c) 
+    delay           += MECserver.offload_computation((total_bit*predictFov_rate)*c) 
 
     #D3 계산
     delay += MECserver.transmit_data_to_user((total_bit*predictFov_rate)*C_r) # 예측 성공한 부분을 압축해 MEC 서버에서 VR 유저로 전송
