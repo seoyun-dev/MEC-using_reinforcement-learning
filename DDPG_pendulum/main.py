@@ -1,4 +1,3 @@
-import gym
 from DDPGAgent import DDPGAgent
 from Env import VRStreamingEnv
 

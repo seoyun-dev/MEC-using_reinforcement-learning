@@ -15,11 +15,10 @@ C_r = 1/600      # 비디오 청크의 압축률
 D1  = 0.5        # Video chunk duration in seconds
 
 # Video, frame 
-M, N = 8, 4      # 투영된 비디오의 가로, 세로 타일 수
-
-k = 2            # Fov당 타일의 수
-f = 60           # fps (frames per second or the video chunk)
-B  = 20000000    # 한 타일의 프레임 당 데이터 크기(20Mbit/frame/tile)
+fov_size = 1080 * 1200    # FoV의 1배율 사이즈 (가로*세로)
+k = 1                     # 예측 FoV 비율
+f = 60                    # fps (frames per second or the video chunk)
+B  = 86.8                 # 1*1 사이즈의 프레임 당 데이터 크기(20Mbit/frame/.)
 
 # E2E 임계치
 D_th = 0.02      # seconds
@@ -59,23 +58,21 @@ Fail        = 0
 # E2E = D2+D3+D4+D5
 for i in range(eterate):
     delay     = 0
-    total_bit = k**2 * B      # FoV 타일들의 비트 
-        
-    #D2 계산
+    
+    #D1 = MEC의 caching delay = cloud->MEC cacahing 통신 지연
+    delay += fov_size * k**2 * C_r / R1
+    #D2 = 예측과 실제 FoV 일치확인 지연 + 일치한 시야의 c 비율 랜더링 지연
     predictFov_rate  = MECserver.get_predict_fov()  # 예측 성공 비율
-    # delay           += MECserver.offload_computation(total_bit) # VR유저에게 받아온 실제 FOV와 예측 FOV비교
-    # TODO 아래처럼 변경 맞는지 확인
-    # 캐싱데이터 중 예측 성공한 데이터의 비율 c만큼 계산
-    delay           += MECserver.offload_computation((total_bit*predictFov_rate)*c) 
+    delay += fov_size/W_M + fov_size*predictFov_rate*c/W_M
 
-    #D3 계산
-    delay += MECserver.transmit_data_to_user((total_bit*predictFov_rate)*C_r) # 예측 성공한 부분을 압축해 MEC 서버에서 VR 유저로 전송
+    #D3 = MEC > User 통신 지연
+    delay += fov_size*predictFov_rate*(c*h + (1-c))*C_r/R2
 
-    #D4 계산
-    delay += cloudserver.transmit_data_to_user((total_bit*(1-predictFov_rate))*C_r) # 예측 실패한 부분을 압축해 클라우드 서버에서 VR 유저로 전송
+    #D4 = Cloud > User 통신 지연
+    delay += fov_size*(1-predictFov_rate)*C_r/R1 
 
-    #D5 계산
-    delay += vruser.offload_computation((total_bit*predictFov_rate)*(1-c)) # VR 유저에서 MEC가 오프로딩한 99%를 제외하고 계산
+    #D5 = HMD 계산 지연
+    delay += ( fov_size*(1-predictFov_rate)+fov_size*predictFov_rate*(1-c) ) / W_U
         
     #딜레이 결과
     print("{} 번 실행 딜레이: {:.7f}초 (FoV예측 비율: {:.2f} %)".format(i+1, delay, 100*predictFov_rate))

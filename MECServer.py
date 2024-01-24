@@ -12,6 +12,9 @@ class MECServer:
         # 사용자에게 데이터를 전송
         delay = data / self.transmission_rate  # 10*(0,160)Mbps
         return delay
+    
+    def caching_transmit(self, data):
+        delay = data 
 
     def get_predict_fov(self):
         # FOV 예측 분포를 생성
