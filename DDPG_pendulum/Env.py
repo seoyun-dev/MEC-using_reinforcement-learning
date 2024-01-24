@@ -17,8 +17,8 @@ class Env:
         self.R1 = np.random.random()
         self.R2 = np.random.random()
         self.R3 = np.random.random()
-        self.W_M = np.random.random()
-        self.W_U = np.random.random()
+        self.W_M = 1.6 * (10**12)
+        self.W_U = 1.6 * (40**9)
         return np.array([self.R1, self.R2, self.R3, self.W_M, self.W_U])
 
     def step(self, action):
