@@ -9,15 +9,19 @@ class Actor(nn.Module):
     def __init__(self, state_dim, action_dim):
         super(Actor, self).__init__()
         self.fc1 = nn.Linear(state_dim, 128)
+        self.bn1 = nn.BatchNorm1d(128)  # 첫 번째 은닉층 후 배치 정규화
         self.fc2 = nn.Linear(128, 128)
+        self.bn2 = nn.BatchNorm1d(128)  # 두 번째 은닉층 후 배치 정규화
         self.fc3 = nn.Linear(128, 128)
+        self.bn3 = nn.BatchNorm1d(128)  # 세 번째 은닉층 후 배치 정규화
         self.fc4 = nn.Linear(128, action_dim)
 
     def forward(self, x):
-        x = torch.relu(self.fc1(x))
-        x = torch.relu(self.fc2(x))
-        x = torch.relu(self.fc3(x))
+        x = torch.relu(self.bn1(self.fc1(x)))
+        x = torch.relu(self.bn2(self.fc2(x)))
+        x = torch.relu(self.bn3(self.fc3(x)))
         x = torch.sigmoid(self.fc4(x))    # c: 0~1
+        
         if x[1] < 0.25 : x[1] = 0.25
         elif x[1] < 0.5 : x[1] = 0.5
         elif x[1] < 0.75 : x[1] = 0.75

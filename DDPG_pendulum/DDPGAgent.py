@@ -37,6 +37,21 @@ class DDPGAgent:
         self.update_target_models(tau=1)        # 타겟 파라미터들 초기화 (actor, critic과 같도록)
 
 
+    ##### whitening 함수
+    def whiten(x):
+        # 평균 빼서 중심으로 이동
+        mean = torch.mean(x, dim=0, keepdim=True)
+        x -= mean
+        # 공분산 행렬 계산
+        cov = torch.mm(x.T, x) / (x.size(0) - 1)
+        # 고유값 분해 - 고유벡터, 고유값 얻기
+        e, v = torch.symeig(cov, eigenvectors=True)
+        # 고유벡터에 데이터 투영 + 스케일 조정 -> 상관관계 x, 분산 1
+        x_whitened = torch.mm(x, v / torch.sqrt(e + 1e-5))
+        
+        return x_whitened
+
+
     ##### soft target 파라미터 업데이트 함수
     def update_target_models(self, tau=None):
         if tau is None:
@@ -54,8 +69,8 @@ class DDPGAgent:
             return
 
         state, next_state, action, reward, done = self.replay_buffer.sample(self.batch_size)
-        state       = torch.Tensor(state, dtype=torch.float32)
-        next_state  = torch.Tensor(next_state, dtype=torch.float32)
+        state       = self.whiten(torch.Tensor(state, dtype=torch.float32))
+        next_state  = self.whiten(torch.Tensor(next_state, dtype=torch.float32))
         action      = torch.Tensor(action, dtype=torch.float32)
         reward      = torch.Tensor(reward, dtype=torch.float32)
         done        = torch.Tensor(done, dtype=torch.float32)
